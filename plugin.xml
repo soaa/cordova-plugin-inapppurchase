@@ -30,7 +30,7 @@
     <source-file src="src/ios/PaymentsPlugin.swift" />
 
     <framework src="StoreKit.framework" />
-    <framework src="SwiftyStoreKit" src="podspec" spec="0.11.3" />
+    <framework src="SwiftyStoreKit" type="podspec" spec="0.11.3" />
     <dependency id="cordova-plugin-add-swift-support" version="^1.7.1" />
   </platform>
 
