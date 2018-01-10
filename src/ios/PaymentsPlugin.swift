@@ -25,10 +25,33 @@ class PaymentsManager {
 @objc(PaymentsPlugin) class PaymentsPlugin: CDVPlugin {
 
     override func pluginInitialize() {
+        NSLog("initializing payment plugin")
+        NotificationCenter.default.addObserver(self, selector: #selector(PaymentsPlugin.applicationDidFinishLaunching), name: Notification.Name.UIApplicationDidFinishLaunching, object: nil)
+    }
+    
+    @objc func applicationDidFinishLaunching(_ notification: Notification) {
+        // atomic set true to javascript manually can handle transactions
+        // should end transaction with finishTransaction
+        SwiftyStoreKit.completeTransactions(atomically: false) { purchases in
+            for purchase in purchases {
+                NSLog("payment:completeTransactions:\(purchase.productId) -> \(purchase.transaction.transactionIdentifier!)")
+
+                switch purchase.transaction.transactionState {
+                case .purchased, .restored:
+                    if (PaymentsManager.sharedInstance.callbackId != nil) {
+                        self.completeTransaction(purchase: purchase, callbackId: PaymentsManager.sharedInstance.callbackId!)
+                    } else {
+                        PaymentsManager.sharedInstance.uncompletedPurchases.append(purchase)
+                    }
+                case .failed, .purchasing, .deferred:
+                    break // do nothing
+                }
+            }
+        }
     }
 
     @objc(getProducts:) func getProducts(command: CDVInvokedUrlCommand) {
-        NSLog("getProducts called")
+        NSLog("payment: getProducts called")
         if let productIds = command.arguments.first as? NSArray {
             let products = Set.init(productIds as! [String])
     
@@ -39,7 +62,7 @@ class PaymentsManager {
                     return
                 } else {
                     
-                    let validProducts = result.retrievedProducts.map { product -> [String: Any] in
+                    let validProducts = result.retrievedProducts.map { product -> Dictionary<String, Any> in
                         let formatter = NumberFormatter()
                         formatter.numberStyle = .currency
                         formatter.locale = product.priceLocale
@@ -51,13 +74,14 @@ class PaymentsManager {
                             "priceAsDecimal" : product.price,
                             "price" : product.localizedPrice ?? product.price.stringValue,
                             "currency" : formatter.currencyCode
-                            ] as [String : Any]
+                            ]
                     }
                     
                     let pluginResult = CDVPluginResult.init(status: CDVCommandStatus_OK,
-                                                            messageAs: ["products": validProducts, "invalidProductsIds": result.invalidProductIDs])
+                                                            messageAs: ["products": validProducts, "invalidProductIds": Array(result.invalidProductIDs)])!
                     
-                    pluginResult?.setKeepCallbackAs(true)
+                    pluginResult.setKeepCallbackAs(true)
+                    pluginResult.argumentsAsJSON()
                     self.commandDelegate.send(pluginResult, callbackId: command.callbackId)
                 }
             }
@@ -69,7 +93,7 @@ class PaymentsManager {
     
     @objc(buy:) func buy(command: CDVInvokedUrlCommand) {
         if let productId = command.arguments.first as? String {
-            SwiftyStoreKit.purchaseProduct(productId, atomically: true) { result in
+            SwiftyStoreKit.purchaseProduct(productId, atomically: false) { result in
                 switch result {
                 case .success(let purchase):
                     let receiptData = SwiftyStoreKit.localReceiptData
@@ -81,14 +105,16 @@ class PaymentsManager {
                     let pluginResult = CDVPluginResult.init(status: CDVCommandStatus_OK, messageAs: [
                         "transactionId" : purchase.transaction.transactionIdentifier ?? "",
                         "receipt" : encReceipt,
+                        "signature": purchase.transaction.transactionIdentifier!,
                         "needsFinishTransaction": purchase.needsFinishTransaction
                     ])
                     
+                    NSLog("payment:buy:success \(purchase)")
                     pluginResult?.setKeepCallbackAs(true)
                     self.commandDelegate.send(pluginResult, callbackId: command.callbackId)
                 case .error(let error):
                     let pluginResult = CDVPluginResult.init(status: CDVCommandStatus_ERROR, messageAs: [
-                        "errorCode" : error.code,
+                        "errorCode" : error.code.rawValue,
                         "errorMessage" : error.localizedDescription
                         ])
                     self.commandDelegate.send(pluginResult, callbackId: command.callbackId)
@@ -119,6 +145,7 @@ class PaymentsManager {
             "date": PaymentsManager.sharedInstance.dateFormatter.string(from: purchase.transaction.transactionDate!),
             "transactionId": purchase.transaction.transactionIdentifier!,
             "transactionState": purchase.transaction.transactionState.rawValue,
+            "signature": purchase.transaction.transactionIdentifier,
             "needsFinishTransaction": purchase.needsFinishTransaction,
             ])
         result?.setKeepCallbackAs(true)
@@ -138,10 +165,8 @@ class PaymentsManager {
     }
     
     @objc(restorePurchases:) func restorePurchases(command: CDVInvokedUrlCommand) {
-        let atomic = command.arguments.first as? Bool ?? true
-        
 
-        SwiftyStoreKit.restorePurchases(atomically: atomic) { results in
+        SwiftyStoreKit.restorePurchases(atomically: false) { results in
             let validTransactions = results.restoredPurchases.map { p -> [String:Any?] in
                 if (p.needsFinishTransaction) {
                     PaymentsManager.sharedInstance.pendingTransactions[p.transaction.transactionIdentifier!] = p.transaction
@@ -152,6 +177,7 @@ class PaymentsManager {
                     "date": PaymentsManager.sharedInstance.dateFormatter.string(from: p.transaction.transactionDate!),
                     "transactionId": p.transaction.transactionIdentifier,
                     "transactionState": p.transaction.transactionState.rawValue,
+                    "signature": p.transaction.transactionIdentifier,
                     "needsFinishTransaction": p.needsFinishTransaction
                 ]
             }
@@ -178,45 +204,3 @@ class PaymentsManager {
     }
 }
 
-//MARK: extension PaymentsPlugin
-extension AppDelegate {
-    
-    static let paymentsPluginClassInit : () = {
-        let swizzle = { (cls: AnyClass, originalSelector: Selector, swizzledSelector: Selector) in
-            let originalMethod = class_getInstanceMethod(cls, originalSelector)!
-            let swizzledMethod = class_getInstanceMethod(cls, swizzledSelector)!
-            
-            let didAddMethod = class_addMethod(cls, originalSelector, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod))
-            
-            if didAddMethod {
-                class_replaceMethod(cls, swizzledSelector, method_getImplementation(originalMethod), method_getTypeEncoding(originalMethod))
-            } else {
-                method_exchangeImplementations(originalMethod, swizzledMethod);
-            }
-        }
-        swizzle(AppDelegate.self, #selector(UIApplicationDelegate.application(_:didFinishLaunchingWithOptions:)), #selector(AppDelegate.kkSwizzledApplication(_:didFinishLaunchingWithOptions:)))
-    }()
-    
-    @objc open func kkSwizzledApplication(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) {
-        NSLog("completeTransactions")
-        // atomic set true to javascript manually can handle transactions
-        // should end transaction with finishTransaction
-        let plugin = self.viewController.getCommandInstance(PaymentsManager.sharedInstance.PLUGIN) as? PaymentsPlugin
-        
-        SwiftyStoreKit.completeTransactions(atomically: true) { purchases in
-            for purchase in purchases {
-                switch purchase.transaction.transactionState {
-                case .purchased, .restored:
-                    if (plugin != nil && PaymentsManager.sharedInstance.callbackId != nil) {
-                        plugin?.completeTransaction(purchase: purchase, callbackId: PaymentsManager.sharedInstance.callbackId!)
-                    } else {
-                        PaymentsManager.sharedInstance.uncompletedPurchases.append(purchase)
-                    }
-                case .failed, .purchasing, .deferred:
-                    break // do nothing
-                }
-            }
-        }
-        self.kkSwizzledApplication(application, didFinishLaunchingWithOptions: launchOptions)
-    }
-}

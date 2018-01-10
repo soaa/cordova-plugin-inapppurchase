@@ -109,6 +109,18 @@ inAppPurchase.buy = function (productId) {
   });
 };
 
+inAppPurchase.completeTransactions = function (success, error) {
+  var cb = function(res) {
+    success({
+        transactionId: res.transactionId,
+        receipt: res.receipt,
+        signature: res.transactionId
+    });
+  };
+
+  window.cordova.exec(cb, null, 'PaymentsPlugin', 'completeTransactions', []);
+};
+
 /**
  * This function exists so that the iOS plugin API will be compatible with that of Android -
  * where this function is required.
