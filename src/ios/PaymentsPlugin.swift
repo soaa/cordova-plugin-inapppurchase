@@ -94,6 +94,7 @@ class PaymentsManager {
     @objc(buy:) func buy(command: CDVInvokedUrlCommand) {
         if let productId = command.arguments.first as? String {
             SwiftyStoreKit.purchaseProduct(productId, atomically: false) { result in
+                NSLog("buy:result \(result)")
                 switch result {
                 case .success(let purchase):
                     let receiptData = SwiftyStoreKit.localReceiptData
@@ -139,6 +140,9 @@ class PaymentsManager {
         if (purchase.needsFinishTransaction) {
             PaymentsManager.sharedInstance.pendingTransactions[purchase.transaction.transactionIdentifier!] = purchase.transaction
         }
+
+        let receiptData = SwiftyStoreKit.localReceiptData
+        let encReceipt = receiptData?.base64EncodedString(options: [])
         
         let result = CDVPluginResult.init(status: CDVCommandStatus_OK, messageAs: [
             "productId": purchase.productId,
@@ -147,6 +151,7 @@ class PaymentsManager {
             "transactionState": purchase.transaction.transactionState.rawValue,
             "signature": purchase.transaction.transactionIdentifier,
             "needsFinishTransaction": purchase.needsFinishTransaction,
+            "receipt": encReceipt
             ])
         result?.setKeepCallbackAs(true)
         self.commandDelegate.send(result, callbackId: callbackId)
