@@ -26,6 +26,11 @@ class PaymentsManager {
 
     override func pluginInitialize() {
         NSLog("initializing payment plugin")
+
+        SwiftyStoreKit.shouldAddStorePaymentHandler = { payment, product in
+            return true
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(PaymentsPlugin.applicationDidFinishLaunching), name: Notification.Name.UIApplicationDidFinishLaunching, object: nil)
     }
     
