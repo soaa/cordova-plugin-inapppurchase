@@ -60,7 +60,7 @@
     <source-file src="src/android/Inventory.java" target-dir="app/src/main/java/com/alexdisler/inapppurchases" />
     <source-file src="src/android/Purchase.java" target-dir="app/src/main/java/com/alexdisler/inapppurchases" />
     <source-file src="src/android/Security.java" target-dir="app/src/main/java/com/alexdisler/inapppurchases" />
-    <source-file src="src/android/SkuDetails.java" target-dir="src/com/main/java/alexdisler/inapppurchases" />
+    <source-file src="src/android/SkuDetails.java" target-dir="app/src/main/java/com/alexdisler/inapppurchases" />
     <source-file src="src/android/billing/IInAppBillingService.aidl" target-dir="src/com/android/vending/billing" />
   </platform>
 
