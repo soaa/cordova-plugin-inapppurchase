@@ -139,12 +139,20 @@ inAppPurchase.getProducts = function (productIds) {
             description: val.description,
             price: val.price,
             currency: val.currency,
-            priceAsDecimal: val.priceAsDecimal,
+            priceAsDecimal: val.priceAsDecimal
           };
         });
         resolve(arr);
       }).catch(reject);
     }
+  });
+};
+
+inAppPurchase.store = function () {
+  return new Promise(function (resolve, reject) {
+    nativeCall('store', []).then(function (store) {
+      resolve(store);
+    }).catch(reject);
   });
 };
 

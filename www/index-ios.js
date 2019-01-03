@@ -82,15 +82,21 @@ inAppPurchase.getProducts = function (productIds) {
               productId: val.productId,
               title: val.title,
               description: val.description,
-              price: val.price,
-              currency: val.currency,
               priceAsDecimal: val.priceAsDecimal,
+              price: val.price,
+              currency: val.currency
             };
           });
           resolve(arr);
         }
       }).catch(reject);
     }
+  });
+};
+
+inAppPurchase.store = function () {
+  return new Promise(function (resolve) {
+    resolve('apple');
   });
 };
 
@@ -109,18 +115,6 @@ inAppPurchase.buy = function (productId) {
   });
 };
 
-inAppPurchase.completeTransactions = function (success, error) {
-  var cb = function(res) {
-    success({
-        transactionId: res.transactionId,
-        receipt: res.receipt,
-        signature: res.transactionId
-    });
-  };
-
-  window.cordova.exec(cb, null, 'PaymentsPlugin', 'completeTransactions', []);
-};
-
 /**
  * This function exists so that the iOS plugin API will be compatible with that of Android -
  * where this function is required.
@@ -135,8 +129,8 @@ inAppPurchase.subscribe = function (productId) {
  * where this function is required.
  * See README for more details.
  */
-inAppPurchase.consume = function (type, receipt, signature) {
-  return nativeCall('finishTransaction', [signature]);
+inAppPurchase.consume = function () {
+  return Promise.resolve();
 };
 
 inAppPurchase.getReceipt = function () {

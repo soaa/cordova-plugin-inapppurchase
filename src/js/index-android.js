@@ -58,6 +58,14 @@ inAppPurchase.getProducts = (productIds) => {
   });
 };
 
+inAppPurchase.store = () => {
+  return new Promise((resolve, reject) => {
+    nativeCall('store', []).then((store) => {
+      resolve(store);
+    }).catch(reject);
+  })
+}
+
 const executePaymentOfType = (type, productId) => {
   return new Promise((resolve, reject) => {
     if (!inAppPurchase.utils.validString(productId)) {
