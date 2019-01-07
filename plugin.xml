@@ -64,6 +64,7 @@
     <source-file src="src/android/enums/ItemType.kt" target-dir="app/src/main/java/com/alexdisler/inapppurchases/enums" />
     <source-file src="src/android/enums/Store.kt" target-dir="app/src/main/java/com/alexdisler/inapppurchases/enums" />
     <source-file src="src/android/playstore/IabHelperImpl.kt" target-dir="app/src/main/java/com/alexdisler/inapppurchases/playstore" />
+    <source-file src="src/android/onestore/IabHelperImpl.kt" target-dir="app/src/main/java/com/alexdisler/inapppurchases/onestore" />
     <source-file src="src/android/billing/IInAppBillingService.aidl" target-dir="src/com/android/vending/billing" />
     <lib-file src="src/android/libs/iap_plugin_v17.02.00_20181012.jar" />
   </platform>

@@ -87,7 +87,7 @@ class IabHelperImpl
  * public key in your application's page on Google Play Developer Console. Note that this
  * is NOT your "developer public key".
  */
-(ctx: Context, base64PublicKey: String) : IabHelper(ctx.applicationContext) {
+(ctx: Context, base64PublicKey: String) : IabHelper(ctx) {
     // Is an asynchronous operation in progress?
     // (only one at a time can be in progress)
     private var mAsyncInProgress = false
@@ -143,7 +143,7 @@ class IabHelperImpl
                 if (disposed) return
                 logDebug("Billing service connected.")
                 mService = IInAppBillingService.Stub.asInterface(service)
-                val packageName = applicationContext.packageName
+                val packageName = context.applicationContext.packageName
                 try {
                     logDebug("Checking for in-app billing 3 support.")
 
@@ -182,9 +182,9 @@ class IabHelperImpl
 
         val serviceIntent = Intent("com.android.vending.billing.InAppBillingService.BIND")
         serviceIntent.setPackage("com.android.vending")
-        if (!applicationContext.packageManager.queryIntentServices(serviceIntent, 0).isEmpty()) {
+        if (!context.applicationContext.packageManager.queryIntentServices(serviceIntent, 0).isEmpty()) {
             // service available to handle that Intent
-            applicationContext.bindService(serviceIntent, mServiceConn!!, Context.BIND_AUTO_CREATE)
+            context.applicationContext.bindService(serviceIntent, mServiceConn!!, Context.BIND_AUTO_CREATE)
         } else {
             // no service available to handle that Intent
             listener(
@@ -203,7 +203,7 @@ class IabHelperImpl
         logDebug("Disposing.")
         if (mServiceConn != null) {
             logDebug("Unbinding from service.")
-            applicationContext.unbindService(mServiceConn!!)
+            context.applicationContext.unbindService(mServiceConn!!)
         }
 
         mServiceConn = null
@@ -246,7 +246,7 @@ class IabHelperImpl
 
         try {
             logDebug("Constructing buy intent for $sku, item type: $itemType")
-            val buyIntentBundle = mService!!.getBuyIntent(3, applicationContext.packageName, sku, itemType.value, extraData)
+            val buyIntentBundle = mService!!.getBuyIntent(3, context.applicationContext.packageName, sku, itemType.value, extraData)
             val response = getResponseCodeFromBundle(buyIntentBundle)
             if (response != IabHelper.BILLING_RESPONSE_RESULT_OK) {
                 logError("Unable to buy item, Error response: " + getResponseDesc(response))
@@ -338,7 +338,7 @@ class IabHelperImpl
 
                 val sku = purchase.sku
                 // Only allow purchase verification to be skipped if we are debuggable
-                val skipPurchaseVerification = skipPurchaseVerification && applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+                val skipPurchaseVerification = skipPurchaseVerification && context.applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
                 // Verify signature
                 if (!skipPurchaseVerification) {
                     if (!Security.verifyPurchase(mSignatureBase64, purchaseData, dataSignature)) {
@@ -499,7 +499,7 @@ class IabHelperImpl
             }
 
             logDebug("Consuming sku: $sku, token: $token")
-            val response = mService!!.consumePurchase(3, applicationContext.packageName, token)
+            val response = mService!!.consumePurchase(3, context.applicationContext.packageName, token)
             if (response == IabHelper.BILLING_RESPONSE_RESULT_OK) {
                 logDebug("Successfully consumed sku: $sku")
             } else {
@@ -605,15 +605,15 @@ class IabHelperImpl
     internal fun queryPurchases(inv: Inventory, itemType: ItemType): Int {
         // Query purchases
         logDebug("Querying owned items, item type: $itemType")
-        logDebug("Package name: " + applicationContext.packageName)
+        logDebug("Package name: " + context.applicationContext.packageName)
         var verificationFailed = false
         // Only allow purchase verification to be skipped if we are debuggable
-        val skipPurchaseVerification = skipPurchaseVerification && applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val skipPurchaseVerification = skipPurchaseVerification && context.applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         var continueToken: String? = null
 
         do {
             logDebug("Calling getPurchases with continuation token: " + continueToken!!)
-            val ownedItems = mService!!.getPurchases(3, applicationContext.packageName,
+            val ownedItems = mService!!.getPurchases(3, context.applicationContext.packageName,
                     itemType.value, continueToken)
 
             val response = getResponseCodeFromBundle(ownedItems)
@@ -685,7 +685,7 @@ class IabHelperImpl
 
         val querySkus = Bundle()
         querySkus.putStringArrayList(GET_SKU_DETAILS_ITEM_LIST, skuList)
-        val skuDetails = mService!!.getSkuDetails(3, applicationContext.packageName,
+        val skuDetails = mService!!.getSkuDetails(3, context.applicationContext.packageName,
                 itemType.value, querySkus)
 
         if (!skuDetails.containsKey(RESPONSE_GET_SKU_DETAILS_LIST)) {

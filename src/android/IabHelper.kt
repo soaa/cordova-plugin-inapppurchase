@@ -8,7 +8,7 @@ import android.util.Log
 import com.alexdisler.inapppurchases.enums.ItemType
 import java.util.ArrayList
 
-abstract class IabHelper(protected val applicationContext: Context) {
+abstract class IabHelper(protected val context: Context) {
   private var debugLog: Boolean = false
   private var debugTag: String = "IabHelper"
 
