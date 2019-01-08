@@ -43,8 +43,11 @@ constructor(
 
     companion object {
 
+        /**
+         * playstore, onestore 가 동일함
+         */
         @Throws(JSONException::class)
-        fun initFromPlayStore(itemType: ItemType, signature: String, mJson: String): Purchase{
+        fun apply(itemType: ItemType, signature: String, mJson: String): Purchase{
             val o = JSONObject(mJson)
             return Purchase(
                     itemType,

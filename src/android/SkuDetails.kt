@@ -29,10 +29,10 @@ constructor(
         val sku: String,
         val type: String,
         val priceAsDecimal: Double? = null,
-        val price: String,
-        val priceCurrency: String,
-        val title: String,
-        val description: String,
+        val price: String? = null,
+        val priceCurrency: String? = null,
+        val title: String? = null,
+        val description: String? = null,
         val mJson: String? = null
         ) {
 

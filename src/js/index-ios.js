@@ -48,7 +48,13 @@ inAppPurchase.getProducts = (productIds) => {
 inAppPurchase.store = () => {
   return new Promise((resolve) => {
     resolve('apple');
-  })
+  });
+}
+
+inAppPurchase.setSTore = () => {
+  return new Promise((resolve) => {
+    resolve(true);
+  });
 }
 
 inAppPurchase.buy = (productId) => {

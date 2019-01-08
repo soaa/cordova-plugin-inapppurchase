@@ -29,7 +29,7 @@ abstract class IabHelper(protected val context: Context) {
 
   abstract fun startSetup(listener: (IabResult) -> Unit)
 
-  abstract fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent): Boolean
+  abstract fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean
 
   /**
    * Enables or disable debug logging through LogCat.
@@ -80,40 +80,13 @@ abstract class IabHelper(protected val context: Context) {
    * @param purchases The list of PurchaseInfo objects representing the purchases to consume.
    * @param listener The listener to notify when the consumption operation finishes.
    */
-  abstract fun consumeAsync(purchases: List<Purchase>, listener: (List<Purchase>, List<IabResult>) -> Unit)
+  // abstract fun consumeAsync(purchases: List<Purchase>, listener: (List<Purchase>, List<IabResult>) -> Unit)
 
-  abstract fun queryInventoryAsync(querySkuDetails: Boolean,
-                          moreSkus: List<String>?,
-                          listener: ((IabResult, Inventory) -> Unit)?)
+  abstract fun queryInventoryAsync(
+                          moreSkus: List<String>,
+                          listener: (IabResult, Inventory?) -> Unit)
 
-  fun queryInventoryAsync(listener: (IabResult, Inventory) -> Unit) {
-    queryInventoryAsync(true, null, listener)
-  }
-
-  fun queryInventoryAsync(querySkuDetails: Boolean, listener: (IabResult, Inventory) -> Unit) {
-    queryInventoryAsync(querySkuDetails, null, listener)
-  }
-
-  @Throws(IabException::class)
-  fun queryInventory(querySkuDetails: Boolean, moreSkus: List<String>): Inventory {
-    return queryInventory(querySkuDetails, moreSkus, emptyList())
-  }
-
-  /**
-   * Queries the inventory. This will query all owned items from the server, as well as
-   * information on additional skus, if specified. This method may block or take long to execute.
-   * Do not call from a UI thread. For that, use the non-blocking version {@link #refreshInventoryAsync}.
-   *
-   * @param querySkuDetails if true, SKU details (price, description, etc) will be queried as well
-   *     as purchase information.
-   * @param moreItemSkus additional PRODUCT skus to query information on, regardless of ownership.
-   *     Ignored if null or if querySkuDetails is false.
-   * @param moreSubsSkus additional SUBSCRIPTIONS skus to query information on, regardless of ownership.
-   *     Ignored if null or if querySkuDetails is false.
-   * @throws IabException if a problem occurs while refreshing the inventory.
-   */
-  @Throws(IabException::class)
-  abstract fun queryInventory(querySkuDetails: Boolean, moreSkus: List<String>, moreSubsSkus: List<String>): Inventory
+  abstract fun queryPurchasesAsync(listener: (IabResult, List<Purchase>?) -> Unit)
 
   /** Returns whether subscriptions are supported.  */
   fun subscriptionsSupported(): Boolean {
@@ -135,6 +108,14 @@ abstract class IabHelper(protected val context: Context) {
 
   protected fun logWarn(msg: String) {
     Log.w(debugTag, "In-app billing warning: $msg")
+  }
+
+  // Checks that setup was done; if not, throws an exception.
+  protected open fun checkSetupDone(operation: String) {
+    if (!setupDone) {
+      logError("Illegal state for operation ($operation): IAB helper is not set up.")
+      throw IllegalStateException("IAB helper is not set up. Can't perform operation: $operation")
+    }
   }
 
   /*

@@ -26,12 +26,8 @@ import org.apache.cordova.CallbackContext
 import org.apache.cordova.CordovaWebView
 
 import com.alexdisler.inapppurchases.enums.Store
-import com.alexdisler.inapppurchases.playstore.IabHelperImpl
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.util.Log
 import com.alexdisler.inapppurchases.enums.ItemType
 
@@ -44,40 +40,8 @@ open class InAppBillingV3 : CordovaPlugin() {
     private var billingInitialized = false
     private var orderSerial = AtomicInteger(0)
 
-    private var manifestObject: JSONObject? = null
-
-    private val manifestContents: JSONObject?
-        get() {
-            if (manifestObject != null) return manifestObject
-
-            val context = this.cordova.activity
-            val `is`: InputStream
-            try {
-                `is` = context.assets.open("www/manifest.json")
-                val s = Scanner(`is`).useDelimiter("\\A")
-                val manifestString = if (s.hasNext()) s.next() else ""
-                Log.d(TAG, "manifest:$manifestString")
-                manifestObject = JSONObject(manifestString)
-            } catch (e: IOException) {
-                Log.d(TAG, "Unable to read manifest file:" + e.toString())
-                manifestObject = null
-            } catch (e: JSONException) {
-                Log.d(TAG, "Unable to parse manifest file:" + e.toString())
-                manifestObject = null
-            }
-
-            return manifestObject
-        }
-
-    private val base64EncodedPublicKey: String?
-        get() {
-            val manifestObject = manifestContents
-            return manifestObject?.optString("play_store_key")
-        }
-
     private fun shouldSkipPurchaseVerification(): Boolean {
-        val manifestObject = manifestContents
-        return manifestObject?.optBoolean("skip_purchase_verification") ?: false
+        return false
     }
 
     private fun initializeBillingHelper(): Boolean {
@@ -88,17 +52,20 @@ open class InAppBillingV3 : CordovaPlugin() {
 
 
         val context = this.cordova.activity
-        val base64EncodedPublicKey = base64EncodedPublicKey
         val skipPurchaseVerification = shouldSkipPurchaseVerification()
-        if (base64EncodedPublicKey != null) {
-            iabHelper = IabHelperImpl(context, base64EncodedPublicKey)
-            iabHelper!!.skipPurchaseVerification = skipPurchaseVerification
-            billingInitialized = false
-            return true
+
+        iabHelper = when(store) {
+            Store.ONESTORE -> com.alexdisler.inapppurchases.onestore.IabHelperImpl(cordova)
+            Store.GOOGLE -> com.alexdisler.inapppurchases.playstore.IabHelperImpl(cordova)
+            else -> {
+                Log.d(TAG, "Unable to initialize billing")
+                return false
+            }
         }
 
-        Log.d(TAG, "Unable to initialize billing")
-        return false
+        iabHelper!!.skipPurchaseVerification = skipPurchaseVerification
+        billingInitialized = false
+        return true
     }
 
     override fun initialize(cordova: CordovaInterface, webView: CordovaWebView) {
@@ -107,6 +74,7 @@ open class InAppBillingV3 : CordovaPlugin() {
         val applicationContext = cordova.context.applicationContext
         val pm = applicationContext.packageManager
         this.store = Store.findByInstallerPackageName(pm.getInstallerPackageName(applicationContext.packageName))
+        // this.store = Store.ONESTORE
         initializeBillingHelper()
     }
 
@@ -152,7 +120,26 @@ open class InAppBillingV3 : CordovaPlugin() {
                 callbackContext.success(this.store!!.name.toLowerCase())
                 true
             }
+            "setStore" -> {
+               setStore(args, callbackContext)
+            }
             else -> false
+        }
+    }
+
+    fun setStore(args: JSONArray, callbackContext: CallbackContext): Boolean {
+        val store = args.optString(0)?.let { Store.valueOf(it.toUpperCase()) }
+
+        return when(store) {
+            null -> {
+                callbackContext.error("invalid store : ${args.optString(0)}")
+                false
+            }
+            else -> {
+                this.store = store
+                callbackContext.success()
+                true
+            }
         }
     }
 
@@ -252,7 +239,7 @@ open class InAppBillingV3 : CordovaPlugin() {
             val type = args.getString(0)
             val receipt = args.getString(1)
             val signature = args.getString(2)
-            purchase = Purchase.initFromPlayStore(ItemType.valueOf(type), signature, receipt)
+            purchase = Purchase.apply(ItemType.valueOf(type), signature, receipt)
         } catch (e: JSONException) {
             callbackContext.error(makeError("Unable to parse purchase token", INVALID_ARGUMENTS))
             return false
@@ -306,23 +293,23 @@ open class InAppBillingV3 : CordovaPlugin() {
             callbackContext.error(makeError("Billing is not initialized", BILLING_NOT_INITIALIZED))
             return false
         }
-        iabHelper!!.queryInventoryAsync(true, moreSkus) { result, inventory ->
+        iabHelper?.queryInventoryAsync(moreSkus) { result, inventory ->
             if (result.isFailure) {
                 callbackContext.error("Error retrieving SKU details")
             } else {
                 val response = JSONArray()
                 try {
                     for (sku in moreSkus) {
-                        val skuDetails = inventory.getSkuDetails(sku)
-                        if (skuDetails != null) {
-                            val detailsJson = JSONObject()
-                            detailsJson.put("productId", skuDetails!!.sku)
-                            detailsJson.put("title", skuDetails!!.title)
-                            detailsJson.put("description", skuDetails!!.description)
-                            detailsJson.put("priceAsDecimal", skuDetails!!.priceAsDecimal)
-                            detailsJson.put("price", skuDetails!!.price)
-                            detailsJson.put("type", skuDetails!!.type)
-                            detailsJson.put("currency", skuDetails!!.priceCurrency)
+                        inventory?.getSkuDetails(sku)?.also {skuDetails ->
+                            val detailsJson = JSONObject().apply {
+                                put("productId", skuDetails.sku)
+                                put("title", skuDetails.title)
+                                put("description", skuDetails.description)
+                                put("priceAsDecimal", skuDetails.priceAsDecimal)
+                                put("price", skuDetails.price)
+                                put("type", skuDetails.type)
+                                put("currency", skuDetails.priceCurrency)
+                            }
                             response.put(detailsJson)
                         }
                     }
@@ -341,23 +328,24 @@ open class InAppBillingV3 : CordovaPlugin() {
         if (iabHelper == null || !billingInitialized) {
             callbackContext.error(makeError("Billing is not initialized", BILLING_NOT_INITIALIZED))
         } else {
-            iabHelper!!.queryInventoryAsync { result, inventory ->
+            iabHelper?.queryPurchasesAsync { result, purchases ->
                 if (result.isFailure) {
                     callbackContext.error("Error retrieving purchase details")
                 } else {
                     val response = JSONArray()
                     try {
-                        inventory.allPurchases.forEach { purchase ->
-                            val detailsJson = JSONObject()
-                            detailsJson.put("orderId", purchase.orderId)
-                            detailsJson.put("packageName", purchase.packageName)
-                            detailsJson.put("productId", purchase.sku)
-                            detailsJson.put("purchaseTime", purchase.purchaseTime)
-                            detailsJson.put("purchaseState", purchase.purchaseState)
-                            detailsJson.put("purchaseToken", purchase.token)
-                            detailsJson.put("signature", purchase.signature)
-                            detailsJson.put("type", purchase.itemType)
-                            detailsJson.put("receipt", purchase.originalJson)
+                        purchases?.forEach { purchase ->
+                            val detailsJson = JSONObject().apply {
+                                put("orderId", purchase.orderId)
+                                put("packageName", purchase.packageName)
+                                put("productId", purchase.sku)
+                                put("purchaseTime", purchase.purchaseTime)
+                                put("purchaseState", purchase.purchaseState)
+                                put("purchaseToken", purchase.token)
+                                put("signature", purchase.signature)
+                                put("type", purchase.itemType)
+                                put("receipt", purchase.originalJson)
+                            }
                             response.put(detailsJson)
                         }
 

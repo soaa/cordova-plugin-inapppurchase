@@ -100,6 +100,12 @@ inAppPurchase.store = function () {
   });
 };
 
+inAppPurchase.setSTore = function () {
+  return new Promise(function (resolve) {
+    resolve(true);
+  });
+};
+
 inAppPurchase.buy = function (productId) {
   return new Promise(function (resolve, reject) {
     if (!inAppPurchase.utils.validString(productId)) {

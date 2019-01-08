@@ -23,6 +23,7 @@ import android.content.Intent
 import android.content.IntentSender.SendIntentException
 import android.content.ServiceConnection
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -38,6 +39,7 @@ import com.alexdisler.inapppurchases.Security
 import com.alexdisler.inapppurchases.SkuDetails
 import com.alexdisler.inapppurchases.enums.ItemType
 import com.android.vending.billing.IInAppBillingService
+import org.apache.cordova.CordovaInterface
 
 import org.json.JSONException
 
@@ -82,12 +84,8 @@ class IabHelperImpl
  * block and is safe to call from a UI thread.
  *
  * @param ctx Your application or Activity context. Needed to bind to the in-app billing service.
- * @param base64PublicKey Your application's public key, encoded in base64.
- * This is used for verification of purchase signatures. You can find your app's base64-encoded
- * public key in your application's page on Google Play Developer Console. Note that this
- * is NOT your "developer public key".
  */
-(ctx: Context, base64PublicKey: String) : IabHelper(ctx) {
+(private val cordova: CordovaInterface) : IabHelper(cordova.activity) {
     // Is an asynchronous operation in progress?
     // (only one at a time can be in progress)
     private var mAsyncInProgress = false
@@ -115,7 +113,10 @@ class IabHelperImpl
     private var mPurchaseListener: ((IabResult, info: Purchase?) -> Unit)? = null
 
     init {
-        mSignatureBase64 = base64PublicKey
+        val appInfo = context.applicationContext.packageManager.getApplicationInfo(context.applicationContext.packageName, PackageManager.GET_META_DATA)
+        if (appInfo != null) {
+            mSignatureBase64 = appInfo.metaData.getString(PLAYSTORE_KEY)
+        }
         logDebug("IAB helper created.")
     }
 
@@ -296,7 +297,7 @@ class IabHelperImpl
      * false if the result was not related to a purchase, in which case you should
      * handle it normally.
      */
-    override fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent): Boolean {
+    override fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         var result: IabResult
         if (requestCode != mRequestCode) return false
 
@@ -334,7 +335,7 @@ class IabHelperImpl
 
             var purchase: Purchase?
             try {
-                purchase = Purchase.initFromPlayStore(mPurchasingItemType, dataSignature, purchaseData)
+                purchase = Purchase.apply(mPurchasingItemType, dataSignature, purchaseData)
 
                 val sku = purchase.sku
                 // Only allow purchase verification to be skipped if we are debuggable
@@ -390,9 +391,10 @@ class IabHelperImpl
      * Ignored if null or if querySkuDetails is false.
      * @throws IabException if a problem occurs while refreshing the inventory.
      */
+    /*
     @Throws(IabException::class)
-    override fun queryInventory(querySkuDetails: Boolean, moreItemSkus: List<String>,
-                                moreSubsSkus: List<String>): Inventory {
+    private fun queryInventory(querySkuDetails: Boolean, moreItemSkus: List<String>?,
+                               moreSubsSkus: List<String> = emptyList()): Inventory {
         checkNotDisposed()
         checkSetupDone("queryInventory")
         try {
@@ -410,14 +412,14 @@ class IabHelperImpl
             }
 
             // if subscriptions are supported, then also query for subscriptions
-            if (subscriptionsSupported) {
+            if (subscriptionsSupported && moreSubsSkus.isNotEmpty()) {
                 r = queryPurchases(inv, ItemType.SUBSCRIPTION)
                 if (r != IabHelper.BILLING_RESPONSE_RESULT_OK) {
                     throw IabException(r, "Error refreshing inventory (querying owned subscriptions).")
                 }
 
                 if (querySkuDetails) {
-                    r = querySkuDetails(ItemType.SUBSCRIPTION, inv, moreItemSkus)
+                    r = querySkuDetails(ItemType.SUBSCRIPTION, inv, moreSubsSkus)
                     if (r != IabHelper.BILLING_RESPONSE_RESULT_OK) {
                         throw IabException(r, "Error refreshing inventory (querying prices of subscriptions).")
                     }
@@ -432,6 +434,7 @@ class IabHelperImpl
         }
 
     }
+    */
 
 
     /**
@@ -444,30 +447,52 @@ class IabHelperImpl
      * @param moreSkus as in [.queryInventory]
      * @param listener The listener to notify when the refresh operation completes.
      */
-    override fun queryInventoryAsync(querySkuDetails: Boolean,
-                                     moreSkus: List<String>?,
-                                     listener: ((IabResult, Inventory) -> Unit)?) {
+    override fun queryInventoryAsync(
+                                     moreSkus: List<String>,
+                                     listener: (IabResult, Inventory?) -> Unit) {
         val handler = Handler()
         checkNotDisposed()
         checkSetupDone("queryInventory")
         flagStartAsync("refresh inventory")
-        Thread(Runnable {
-            var result = IabResult(IabHelper.BILLING_RESPONSE_RESULT_OK, "Inventory refresh successful.")
-            var inv: Inventory? = null
-            try {
-                inv = queryInventory(querySkuDetails, moreSkus!!)
-            } catch (ex: IabException) {
-                result = ex.result
+        cordova.threadPool.execute {
+            val inv: Inventory = Inventory()
+            val r = querySkuDetails(ItemType.INAPP, inv, moreSkus)
+            val result = when(r) {
+                IabHelper.BILLING_RESPONSE_RESULT_OK ->
+                    IabResult(IabHelper.BILLING_RESPONSE_RESULT_OK, "Inventory refresh successful.")
+                else -> {
+                    IabResult(r, "Error refreshing inventory (querying prices of items).")
+                }
             }
 
             flagEndAsync()
 
-            val resultf = result
-            val invf = inv
-            if (!disposed && listener != null) {
-                handler.post { listener(resultf, invf!!) }
+            handler.post { listener(result, inv) }
+
+        }
+    }
+
+    override fun queryPurchasesAsync(listener: (IabResult, List<Purchase>?) -> Unit) {
+        val handler = Handler()
+        checkNotDisposed()
+        checkSetupDone("queryPurchase")
+        flagStartAsync("query purchase")
+
+        cordova.threadPool.execute {
+            val inv = Inventory()
+            val r = queryPurchases(inv, ItemType.INAPP)
+
+            val result = when(r) {
+                IabHelper.BILLING_RESPONSE_RESULT_OK ->
+                    IabResult(IabHelper.BILLING_RESPONSE_RESULT_OK, "Inventory refresh successful.")
+                else -> {
+                    IabResult(r, "Error refreshing inventory (querying prices of items).")
+                }
             }
-        }).start()
+
+            flagEndAsync()
+            handler.post { listener(result, inv.allPurchases)}
+        }
     }
 
     /**
@@ -534,20 +559,14 @@ class IabHelperImpl
      * @param purchases The list of PurchaseInfo objects representing the purchases to consume.
      * @param listener The listener to notify when the consumption operation finishes.
      */
+    /*
     override fun consumeAsync(purchases: List<Purchase>, listener: (List<Purchase>, List<IabResult>) -> Unit) {
         checkNotDisposed()
         checkSetupDone("consume")
         consumeAsyncInternal(purchases, null, listener)
     }
+    */
 
-
-    // Checks that setup was done; if not, throws an exception.
-    private fun checkSetupDone(operation: String) {
-        if (!setupDone) {
-            logError("Illegal state for operation ($operation): IAB helper is not set up.")
-            throw IllegalStateException("IAB helper is not set up. Can't perform operation: $operation")
-        }
-    }
 
     // Workaround to bug where sometimes response codes come as Long instead of Integer
     private fun getResponseCodeFromBundle(b: Bundle): Int {
@@ -642,7 +661,7 @@ class IabHelperImpl
                 val sku = ownedSkus!![i]
                 if (skipPurchaseVerification || Security.verifyPurchase(mSignatureBase64, purchaseData, signature)) {
                     logDebug("Sku is owned: $sku")
-                    val purchase = Purchase.initFromPlayStore(itemType, signature, purchaseData)
+                    val purchase = Purchase.apply(itemType, signature, purchaseData)
 
                     if (TextUtils.isEmpty(purchase.token)) {
                         logWarn("BUG: empty/null token!")
@@ -755,6 +774,7 @@ class IabHelperImpl
         const val GET_SKU_DETAILS_ITEM_LIST = "ITEM_ID_LIST"
         const val GET_SKU_DETAILS_ITEM_TYPE_LIST = "ITEM_TYPE_LIST"
 
+        const val PLAYSTORE_KEY = "play_store_key"
     }
 
 

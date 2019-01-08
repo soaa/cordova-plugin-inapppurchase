@@ -23,21 +23,13 @@ package com.alexdisler.inapppurchases
  * can also inquire whether a result is a success or a failure by
  * calling [.isSuccess] and [.isFailure].
  */
-class IabResult(val response: Int, message: String?) {
-    var message: String
-        internal set
-    val isSuccess: Boolean
-        get() = response == IabHelper.BILLING_RESPONSE_RESULT_OK
+class IabResult(
+        val response: Int,
+        val message: String? = IabHelper.getResponseDesc(response),
+        val isSuccess: Boolean = response == IabHelper.BILLING_RESPONSE_RESULT_OK
+    ) {
     val isFailure: Boolean
         get() = !isSuccess
-
-    init {
-        if (message.isNullOrBlank()) {
-            this.message = IabHelper.getResponseDesc(response)
-        } else {
-            this.message = message + " (response: " + IabHelper.getResponseDesc(response) + ")"
-        }
-    }
 
     override fun toString(): String {
         return "IabResult: $message"

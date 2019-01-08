@@ -30,6 +30,7 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Random;
 
 /**
  * Security-related methods. For a secure implementation, all of this code
@@ -119,5 +120,37 @@ public class Security {
             Log.e(TAG, "Base64 decoding failed.");
         }
         return false;
+    }
+
+    public static String generatePayload() {
+        char[] payload;
+        final char[] specials = {'~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '-', '{', '}', '|', '\\', '/', '.',
+                '.', '=', '[', ']', '?', '<', '>'};
+        StringBuilder buffer = new StringBuilder();
+        for (char ch = '0'; ch <= '9'; ++ch) {
+            buffer.append(ch);
+        }
+        for (char ch = 'a'; ch <= 'z'; ++ch) {
+            buffer.append(ch);
+        }
+        for (char ch = 'A'; ch <= 'Z'; ++ch) {
+            buffer.append(ch);
+        }
+
+        for (char ch : specials) {
+            buffer.append(ch);
+        }
+
+        payload = buffer.toString().toCharArray();
+
+        StringBuilder randomString = new StringBuilder();
+        Random random = new Random();
+
+        //length : 20자
+        for (int i = 0; i < 20; i++) {
+            randomString.append(payload[random.nextInt(payload.length)]);
+        }
+
+        return randomString.toString();
     }
 }
