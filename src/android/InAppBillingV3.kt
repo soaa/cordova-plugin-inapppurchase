@@ -75,7 +75,7 @@ open class InAppBillingV3 : CordovaPlugin() {
         val pm = applicationContext.packageManager
         this.store = Store.findByInstallerPackageName(pm.getInstallerPackageName(applicationContext.packageName))
         // this.store = Store.ONESTORE
-        initializeBillingHelper()
+        // initializeBillingHelper()
     }
 
     private fun makeError(message: String, resultCode: Int?, result: IabResult): JSONObject {
@@ -117,7 +117,7 @@ open class InAppBillingV3 : CordovaPlugin() {
             "getSkuDetails" -> getSkuDetails(args, callbackContext)
             "restorePurchases" -> restorePurchases(args, callbackContext)
             "store" -> {
-                callbackContext.success(this.store!!.name.toLowerCase())
+                callbackContext.success(this.store?.name?.toLowerCase().orEmpty())
                 true
             }
             "setStore" -> {
@@ -136,7 +136,11 @@ open class InAppBillingV3 : CordovaPlugin() {
                 false
             }
             else -> {
-                this.store = store
+                if (this.store != store) {
+                    this.store = store
+                    this.billingInitialized = false
+                    this.iabHelper = null
+                }
                 callbackContext.success()
                 true
             }
@@ -151,7 +155,7 @@ open class InAppBillingV3 : CordovaPlugin() {
             return true
         }
 
-        if (iabHelper == null) {
+        if (iabHelper == null && !this.initializeBillingHelper()) {
             callbackContext.error(makeError("Billing cannot be initialized", UNABLE_TO_INITIALIZE))
         } else {
             iabHelper!!.startSetup { result ->
@@ -245,15 +249,11 @@ open class InAppBillingV3 : CordovaPlugin() {
             return false
         }
 
-        if (purchase == null) {
-            callbackContext.error(makeError("Unrecognized purchase token", INVALID_ARGUMENTS))
-            return false
-        }
         if (iabHelper == null || !billingInitialized) {
             callbackContext.error(makeError("Billing is not initialized", BILLING_NOT_INITIALIZED))
             return false
         }
-        iabHelper!!.consumeAsync(purchase) { purchase1, result ->
+        iabHelper?.consumeAsync(purchase) { purchase1, result ->
             if (result.isFailure) {
                 val response = result.response
                 if (response == IabHelper.BILLING_RESPONSE_RESULT_ITEM_NOT_OWNED) {

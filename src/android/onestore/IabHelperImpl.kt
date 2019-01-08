@@ -301,8 +301,8 @@ class IabHelperImpl(private val cordova: CordovaInterface) : IabHelper(cordova.a
 
             override fun onSuccess(details: MutableList<ProductDetail>?) {
                 details?.forEach {
-                    when (IapEnum.ProductType.valueOf(it.type)) {
-                        IapEnum.ProductType.IN_APP -> {
+                    when (it.type) {
+                        IapEnum.ProductType.IN_APP.type -> {
                             inv.addSkuDetails(
                                     SkuDetails(
                                             ItemType.INAPP,
@@ -315,10 +315,10 @@ class IabHelperImpl(private val cordova: CordovaInterface) : IabHelper(cordova.a
                                     )
                             )
                         }
-                        IapEnum.ProductType.AUTO -> {
+                        IapEnum.ProductType.AUTO.type -> {
                             inv.addSkuDetails(
                                     SkuDetails(
-                                            ItemType.INAPP,
+                                            ItemType.SUBSCRIPTION,
                                             it.productId,
                                             it.type,
                                             price = it.price,
