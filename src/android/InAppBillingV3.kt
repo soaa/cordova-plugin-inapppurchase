@@ -58,12 +58,13 @@ open class InAppBillingV3 : CordovaPlugin() {
             Store.ONESTORE -> com.alexdisler.inapppurchases.onestore.IabHelperImpl(cordova)
             Store.GOOGLE -> com.alexdisler.inapppurchases.playstore.IabHelperImpl(cordova)
             else -> {
-                Log.d(TAG, "Unable to initialize billing")
+                Log.d(TAG, "Unable to initialize billing store: ${store}")
                 return false
             }
         }
 
-        iabHelper!!.skipPurchaseVerification = skipPurchaseVerification
+        iabHelper?.enableDebugLogging(true)
+        iabHelper?.skipPurchaseVerification = skipPurchaseVerification
         billingInitialized = false
         return true
     }
@@ -129,6 +130,8 @@ open class InAppBillingV3 : CordovaPlugin() {
 
     fun setStore(args: JSONArray, callbackContext: CallbackContext): Boolean {
         val store = args.optString(0)?.let { Store.valueOf(it.toUpperCase()) }
+
+        Log.i(TAG, "setting Store: ${store}")
 
         return when(store) {
             null -> {
