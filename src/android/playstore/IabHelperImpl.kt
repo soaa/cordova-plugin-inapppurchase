@@ -631,7 +631,7 @@ class IabHelperImpl
         var continueToken: String? = null
 
         do {
-            logDebug("Calling getPurchases with continuation token: " + continueToken!!)
+            logDebug("Calling getPurchases with continuation token: " + continueToken)
             val ownedItems = mService!!.getPurchases(3, context.applicationContext.packageName,
                     itemType.value, continueToken)
 
@@ -655,7 +655,7 @@ class IabHelperImpl
             val signatureList = ownedItems.getStringArrayList(
                     RESPONSE_INAPP_SIGNATURE_LIST)
 
-            for (i in purchaseDataList!!.indices) {
+            for (i in purchaseDataList.indices) {
                 val purchaseData = purchaseDataList[i]
                 val signature = signatureList!![i]
                 val sku = ownedSkus!![i]
@@ -679,7 +679,7 @@ class IabHelperImpl
             }
 
             continueToken = ownedItems.getString(INAPP_CONTINUATION_TOKEN)
-            logDebug("Continuation token: " + continueToken!!)
+            logDebug("Continuation token: " + continueToken)
         } while (!TextUtils.isEmpty(continueToken))
 
         return if (verificationFailed) IabHelper.IABHELPER_VERIFICATION_FAILED else IabHelper.BILLING_RESPONSE_RESULT_OK
