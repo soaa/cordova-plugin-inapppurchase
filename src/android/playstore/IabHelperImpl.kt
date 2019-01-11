@@ -721,7 +721,7 @@ class IabHelperImpl
         val responseList = skuDetails.getStringArrayList(
                 RESPONSE_GET_SKU_DETAILS_LIST)
 
-        for (thisResponse in responseList!!) {
+        for (thisResponse in responseList) {
             val d = SkuDetails.initFromPlayStore(itemType, thisResponse)
             logDebug("Got sku details: $d")
             inv.addSkuDetails(d)

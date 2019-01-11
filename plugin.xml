@@ -47,7 +47,7 @@
 
     <config-file target="AndroidManifest.xml" parent="application">
       <meta-data android:name="iap:api_version" android:value="5" />
-      <meta-data android:name="iap:view_option" android:value="popup" />
+      <meta-data android:name="iap:view_option" android:value="full" />
     </config-file>
 
     <config-file target="res/xml/config.xml" parent="/*">
