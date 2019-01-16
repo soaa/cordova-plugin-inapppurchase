@@ -51,7 +51,14 @@ inAppPurchase.store = () => {
   });
 }
 
-inAppPurchase.setSTore = () => {
+inAppPurchase.nativeStore = () => {
+  return new Promise((resolve) => {
+    resolve('apple');
+  });
+}
+
+
+inAppPurchase.setStore = () => {
   return new Promise((resolve) => {
     resolve(true);
   });

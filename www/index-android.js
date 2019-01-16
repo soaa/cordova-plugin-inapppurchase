@@ -156,6 +156,14 @@ inAppPurchase.store = function () {
   });
 };
 
+inAppPurchase.nativeStore = function () {
+  return new Promise(function (resolve, reject) {
+    nativeCall('nativeStore', []).then(function (store) {
+      resolve(store);
+    }).catch(reject);
+  });
+};
+
 inAppPurchase.setStore = function (store) {
   return new Promise(function (resolve, reject) {
     nativeCall('setStore', [store]).then(function () {

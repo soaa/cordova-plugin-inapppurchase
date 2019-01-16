@@ -100,7 +100,13 @@ inAppPurchase.store = function () {
   });
 };
 
-inAppPurchase.setSTore = function () {
+inAppPurchase.nativeStore = function () {
+  return new Promise(function (resolve) {
+    resolve('apple');
+  });
+};
+
+inAppPurchase.setStore = function () {
   return new Promise(function (resolve) {
     resolve(true);
   });

@@ -72,11 +72,15 @@ open class InAppBillingV3 : CordovaPlugin() {
     override fun initialize(cordova: CordovaInterface, webView: CordovaWebView) {
         super.initialize(cordova, webView)
 
-        val applicationContext = cordova.context.applicationContext
-        val pm = applicationContext.packageManager
-        this.store = Store.findByInstallerPackageName(pm.getInstallerPackageName(applicationContext.packageName))
+        this.store = getStoreByInstaller()
         // this.store = Store.ONESTORE
         // initializeBillingHelper()
+    }
+
+    private fun getStoreByInstaller(): Store?  {
+        val applicationContext = cordova.context.applicationContext
+        val pm = applicationContext.packageManager
+        return Store.findByInstallerPackageName(pm.getInstallerPackageName(applicationContext.packageName))
     }
 
     private fun makeError(message: String, resultCode: Int?, result: IabResult): JSONObject {
@@ -119,6 +123,10 @@ open class InAppBillingV3 : CordovaPlugin() {
             "restorePurchases" -> restorePurchases(args, callbackContext)
             "store" -> {
                 callbackContext.success(this.store?.name?.toLowerCase().orEmpty())
+                true
+            }
+            "nativeStore" -> {
+                callbackContext.success(getStoreByInstaller()?.name?.toLowerCase().orEmpty())
                 true
             }
             "setStore" -> {

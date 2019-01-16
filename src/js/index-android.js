@@ -66,6 +66,14 @@ inAppPurchase.store = () => {
   })
 }
 
+inAppPurchase.nativeStore = () => {
+  return new Promise((resolve, reject) => {
+    nativeCall('nativeStore', []).then((store) => {
+      resolve(store);
+    }).catch(reject);
+  })
+}
+
 inAppPurchase.setStore = (store) => {
   return new Promise((resolve, reject) => {
     nativeCall('setStore', [store]).then(() => {
