@@ -9,7 +9,6 @@ import com.alexdisler.inapppurchases.Security
 import com.alexdisler.inapppurchases.enums.ItemType
 import com.onestore.iap.api.*
 import org.apache.cordova.CordovaInterface
-import java.util.ArrayList
 import android.R.attr.data
 import android.app.AlertDialog
 import android.content.DialogInterface
@@ -17,6 +16,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import org.json.JSONObject
+import java.text.NumberFormat
+import java.util.*
 
 
 class IabHelperImpl(private val cordova: CordovaInterface) : IabHelper(cordova.activity) {
@@ -301,6 +302,8 @@ class IabHelperImpl(private val cordova: CordovaInterface) : IabHelper(cordova.a
 
             override fun onSuccess(details: MutableList<ProductDetail>?) {
                 details?.forEach {
+                    val priceAsDecimal = Integer.parseInt(it.price).toDouble()
+
                     when (it.type) {
                         IapEnum.ProductType.IN_APP.type -> {
                             inv.addSkuDetails(
@@ -308,9 +311,9 @@ class IabHelperImpl(private val cordova: CordovaInterface) : IabHelper(cordova.a
                                             ItemType.INAPP,
                                             it.productId,
                                             it.type,
-                                            price = it.price,
+                                            price = NumberFormat.getCurrencyInstance(Locale.KOREA).format(priceAsDecimal),
                                             priceCurrency = "KRW",
-                                            priceAsDecimal = Integer.parseInt(it.price).toDouble(),
+                                            priceAsDecimal = priceAsDecimal,
                                             title = it.title
                                     )
                             )
@@ -321,9 +324,9 @@ class IabHelperImpl(private val cordova: CordovaInterface) : IabHelper(cordova.a
                                             ItemType.SUBSCRIPTION,
                                             it.productId,
                                             it.type,
-                                            price = it.price,
+                                            price = NumberFormat.getCurrencyInstance(Locale.KOREA).format(priceAsDecimal),
                                             priceCurrency = "KRW",
-                                            priceAsDecimal = Integer.parseInt(it.price).toDouble(),
+                                            priceAsDecimal = priceAsDecimal,
                                             title = it.title
                                     )
                             )
