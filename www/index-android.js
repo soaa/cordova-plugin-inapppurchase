@@ -191,6 +191,12 @@ var executePaymentOfType = function executePaymentOfType(type, productId) {
   });
 };
 
+inAppPurchase.completeTransactions = function () {
+  return new Promise(function (resolve, reject) {
+    resolve({});
+  });
+};
+
 inAppPurchase.buy = function (productId) {
   return executePaymentOfType('buy', productId);
 };

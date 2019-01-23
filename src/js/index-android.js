@@ -101,6 +101,12 @@ const executePaymentOfType = (type, productId) => {
   });
 };
 
+inAppPurchase.completeTransactions = () => {	
+  return new Promise((resolve, reject) => {
+    resolve({});
+  });
+};
+
 inAppPurchase.buy = (productId) => {
   return executePaymentOfType('buy', productId);
 };
