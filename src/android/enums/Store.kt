@@ -12,6 +12,10 @@ enum class Store {
                 "com.skt.skaf.Z0000TSEED",
                 "com.kt.om.ktpackageinstaller",
                 "com.android.ktpackageinstaller",
+                "com.kt.olleh.storefront",
+                "com.kt.olleh.istore",
+                "android.lgt.appstore",
+                "com.lguplus.appstore",
                 "com.lguplus.installer"
                     -> ONESTORE
                 "com.android.vending"
