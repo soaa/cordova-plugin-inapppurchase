@@ -371,8 +371,8 @@ open class InAppBillingV3 : CordovaPlugin() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent) {
-        if (!iabHelper!!.handleActivityResult(requestCode, resultCode, intent)) {
-            super.onActivityResult(requestCode, resultCode, intent)
+        when(iabHelper?.handleActivityResult(requestCode, resultCode, intent)) {
+            false -> super.onActivityResult(requestCode, resultCode, intent)
         }
     }
 
