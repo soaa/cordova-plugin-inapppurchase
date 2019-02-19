@@ -8,7 +8,7 @@ class PaymentsManager {
     
     var uncompletedPurchases: [Purchase] = []
     
-    var callbackId: String?
+    //var callbackId: String?
     
     let PLUGIN = "PaymentsPlugin"
     
@@ -43,11 +43,11 @@ class PaymentsManager {
 
                 switch purchase.transaction.transactionState {
                 case .purchased, .restored:
-                    if (PaymentsManager.sharedInstance.callbackId != nil) {
-                        self.completeTransaction(purchase: purchase, callbackId: PaymentsManager.sharedInstance.callbackId!)
-                    } else {
+//                    if (PaymentsManager.sharedInstance.callbackId != nil) {
+//                        self.completeTransaction(purchase: purchase, callbackId: PaymentsManager.sharedInstance.callbackId!)
+//                    } else {
                         PaymentsManager.sharedInstance.uncompletedPurchases.append(purchase)
-                    }
+//                    }
                 case .failed, .purchasing, .deferred:
                     break // do nothing
                 }
@@ -133,12 +133,29 @@ class PaymentsManager {
     }
     
     @objc(completeTransactions:) func completeTransactions(command: CDVInvokedUrlCommand) {
-        while PaymentsManager.sharedInstance.uncompletedPurchases.count > 0 {
-            let purchase = PaymentsManager.sharedInstance.uncompletedPurchases.remove(at: 0)
-            self.completeTransaction(purchase: purchase, callbackId: command.callbackId)
-        }
+//        while PaymentsManager.sharedInstance.uncompletedPurchases.count > 0 {
+//            let purchase = PaymentsManager.sharedInstance.uncompletedPurchases.remove(at: 0)
+//            self.completeTransaction(purchase: purchase, callbackId: command.callbackId)
+//        }
         
-        PaymentsManager.sharedInstance.callbackId = command.callbackId
+        let purchases = PaymentsManager.sharedInstance.uncompletedPurchases.map { (purchase) -> [String:Any] in
+            let receiptData = SwiftyStoreKit.localReceiptData
+            let encReceipt = receiptData?.base64EncodedString(options: [])
+            
+            return [
+                "productId": purchase.productId,
+                "date": PaymentsManager.sharedInstance.dateFormatter.string(from: purchase.transaction.transactionDate!),
+                "transactionId": purchase.transaction.transactionIdentifier!,
+                "transactionState": purchase.transaction.transactionState.rawValue,
+                "signature": purchase.transaction.transactionIdentifier,
+                "needsFinishTransaction": purchase.needsFinishTransaction,
+                "receipt": encReceipt
+            ];
+        }
+        let result = CDVPluginResult.init(status: CDVCommandStatus_OK, messageAs: purchases);
+        
+        self.commandDelegate.send(result, callbackId: command.callbackId);
+        //PaymentsManager.sharedInstance.callbackId = command.callbackId
     }
     
     func completeTransaction(purchase: Purchase, callbackId: String) {
@@ -158,8 +175,8 @@ class PaymentsManager {
             "needsFinishTransaction": purchase.needsFinishTransaction,
             "receipt": encReceipt
             ])
-        result?.setKeepCallbackAs(true)
-        self.commandDelegate.send(result, callbackId: callbackId)
+        //result?.setKeepCallbackAs(true)
+        //self.commandDelegate.send(result, callbackId: callbackId)
     }
 
     @objc(finishTransaction:) func finishTransaction(command: CDVInvokedUrlCommand) {
