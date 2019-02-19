@@ -97,11 +97,7 @@ inAppPurchase.getProducts = function (productIds) {
 inAppPurchase.completeTransactions = function () {
   return new Promise(function (resolve, reject) {
     return nativeCall('completeTransactions', []).then(function (res) {
-      resolve({
-        transactionId: res.transactionId,
-        receipt: res.receipt,
-        signature: res.transactionId
-      });
+      resolve(res);
     });
   });
 };
