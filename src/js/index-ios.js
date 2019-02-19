@@ -106,7 +106,9 @@ inAppPurchase.subscribe = (productId) => {
 //};
 
 inAppPurchase.consume = (type, receipt, signature) => {
-   return nativeCall('finishTransaction', [signature]).then(resolve).catch(reject);
+  return new Promise((resolve, reject) => {
+    nativeCall('finishTransaction', [signature]).then(resolve).catch(reject);
+  });
 };
 
 inAppPurchase.getReceipt = () => {
