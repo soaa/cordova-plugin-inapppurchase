@@ -153,8 +153,12 @@ inAppPurchase.subscribe = function (productId) {
  * where this function is required.
  * See README for more details.
  */
-inAppPurchase.consume = function () {
-  return Promise.resolve();
+//inAppPurchase.consume = () => {
+//  return Promise.resolve();
+//};
+
+inAppPurchase.consume = function (type, receipt, signature) {
+  return nativeCall('finishTransaction', [ignature]).then(resolve).catch(reject);
 };
 
 inAppPurchase.getReceipt = function () {
