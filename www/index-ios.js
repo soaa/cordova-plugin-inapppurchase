@@ -154,7 +154,9 @@ inAppPurchase.subscribe = function (productId) {
 //};
 
 inAppPurchase.consume = function (type, receipt, signature) {
-  return nativeCall('finishTransaction', [signature]).then(resolve).catch(reject);
+  return new Promise(function (resolve, reject) {
+    nativeCall('finishTransaction', [signature]).then(resolve).catch(reject);
+  });
 };
 
 inAppPurchase.getReceipt = function () {
