@@ -43,11 +43,7 @@ class PaymentsManager {
 
                 switch purchase.transaction.transactionState {
                 case .purchased, .restored:
-//                    if (PaymentsManager.sharedInstance.callbackId != nil) {
-//                        self.completeTransaction(purchase: purchase, callbackId: PaymentsManager.sharedInstance.callbackId!)
-//                    } else {
                         PaymentsManager.sharedInstance.uncompletedPurchases.append(purchase)
-//                    }
                 case .failed, .purchasing, .deferred:
                     break // do nothing
                 }
@@ -142,6 +138,10 @@ class PaymentsManager {
             let receiptData = SwiftyStoreKit.localReceiptData
             let encReceipt = receiptData?.base64EncodedString(options: [])
             
+            if (purchase.needsFinishTransaction) {
+                PaymentsManager.sharedInstance.pendingTransactions[purchase.transaction.transactionIdentifier!] = purchase.transaction
+            }
+            
             return [
                 "productId": purchase.productId,
                 "date": PaymentsManager.sharedInstance.dateFormatter.string(from: purchase.transaction.transactionDate!),
@@ -152,31 +152,13 @@ class PaymentsManager {
                 "receipt": encReceipt
             ];
         }
+        
+        PaymentsManager.sharedInstance.uncompletedPurchases.removeAll();
+        
         let result = CDVPluginResult.init(status: CDVCommandStatus_OK, messageAs: purchases);
         
         self.commandDelegate.send(result, callbackId: command.callbackId);
         //PaymentsManager.sharedInstance.callbackId = command.callbackId
-    }
-    
-    func completeTransaction(purchase: Purchase, callbackId: String) {
-        if (purchase.needsFinishTransaction) {
-            PaymentsManager.sharedInstance.pendingTransactions[purchase.transaction.transactionIdentifier!] = purchase.transaction
-        }
-
-        let receiptData = SwiftyStoreKit.localReceiptData
-        let encReceipt = receiptData?.base64EncodedString(options: [])
-        
-        let result = CDVPluginResult.init(status: CDVCommandStatus_OK, messageAs: [
-            "productId": purchase.productId,
-            "date": PaymentsManager.sharedInstance.dateFormatter.string(from: purchase.transaction.transactionDate!),
-            "transactionId": purchase.transaction.transactionIdentifier!,
-            "transactionState": purchase.transaction.transactionState.rawValue,
-            "signature": purchase.transaction.transactionIdentifier,
-            "needsFinishTransaction": purchase.needsFinishTransaction,
-            "receipt": encReceipt
-            ])
-        //result?.setKeepCallbackAs(true)
-        //self.commandDelegate.send(result, callbackId: callbackId)
     }
 
     @objc(finishTransaction:) func finishTransaction(command: CDVInvokedUrlCommand) {
