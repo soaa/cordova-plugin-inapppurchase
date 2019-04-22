@@ -31,7 +31,7 @@ class PaymentsManager {
             return true
         }
 
-        NotificationCenter.default.addObserver(self, selector: #selector(PaymentsPlugin.applicationDidFinishLaunching), name: Notification.Name.UIApplicationDidFinishLaunching, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(PaymentsPlugin.applicationDidFinishLaunching), name: UIApplication.didFinishLaunchingNotification, object: nil)
     }
     
     @objc func applicationDidFinishLaunching(_ notification: Notification) {
@@ -102,6 +102,7 @@ class PaymentsManager {
                     let encReceipt = receiptData?.base64EncodedString(options: [])
                     
                     if (purchase.needsFinishTransaction && purchase.transaction.transactionIdentifier != nil) {
+                        NSLog("payment:buy:addpending")
                         PaymentsManager.sharedInstance.pendingTransactions[purchase.transaction.transactionIdentifier!] = purchase.transaction
                     }
                     let pluginResult = CDVPluginResult.init(status: CDVCommandStatus_OK, messageAs: [
@@ -111,7 +112,7 @@ class PaymentsManager {
                         "needsFinishTransaction": purchase.needsFinishTransaction
                     ])
                     
-                    NSLog("payment:buy:success \(purchase)")
+                    NSLog("payment:buy:success")
                     pluginResult?.setKeepCallbackAs(true)
                     self.commandDelegate.send(pluginResult, callbackId: command.callbackId)
                 case .error(let error):
@@ -163,6 +164,7 @@ class PaymentsManager {
 
     @objc(finishTransaction:) func finishTransaction(command: CDVInvokedUrlCommand) {
         if let transactionId = command.arguments.first as? String {
+            NSLog("payment:finishTransaction:\(transactionId)")
             if let transaction = PaymentsManager.sharedInstance.pendingTransactions[transactionId] {
                 SwiftyStoreKit.finishTransaction(transaction)
                 
