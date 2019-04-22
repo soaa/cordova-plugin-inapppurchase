@@ -33,7 +33,7 @@
 
     <framework src="StoreKit.framework" />
     <framework src="SwiftyStoreKit" type="podspec" spec="0.14.2" />
-    <dependency id="cordova-plugin-add-swift-support" version="^1.7.1" />
+    <dependency id="cordova-plugin-add-swift-support" version="2.0.2" />
   </platform>
 
   <platform name="android">
